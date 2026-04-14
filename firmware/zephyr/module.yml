@@ -1,0 +1,4 @@
+name: zmk-hid-visualizer
+build:
+  cmake: .
+  kconfig: Kconfig

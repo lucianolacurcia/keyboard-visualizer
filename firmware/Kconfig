@@ -1,0 +1,7 @@
+config HID_VISUALIZER
+    bool "HID Visualizer"
+    default n
+    depends on RAW_HID
+    help
+      Sends keypress and layer state events over Raw HID
+      for real-time keyboard visualization.
