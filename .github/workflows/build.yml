@@ -1,0 +1,45 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: linux-amd64
+            deps: |
+              sudo apt-get update
+              sudo apt-get install -y libhidapi-dev libudev-dev libgl-dev \
+                libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev \
+                libwayland-dev libxkbcommon-dev
+          - os: macos-latest
+            name: macos-arm64
+            deps: brew install hidapi
+
+    runs-on: ${{ matrix.os }}
+    name: Build (${{ matrix.name }})
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: app-raylib/go.mod
+
+      - name: Install dependencies
+        run: ${{ matrix.deps }}
+
+      - name: Build
+        working-directory: app-raylib
+        run: CGO_ENABLED=1 go build -o keyboard-visualizer-${{ matrix.name }} .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: keyboard-visualizer-${{ matrix.name }}
+          path: app-raylib/keyboard-visualizer-${{ matrix.name }}
