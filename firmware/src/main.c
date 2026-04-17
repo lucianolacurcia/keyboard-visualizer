@@ -1,7 +1,7 @@
 #include <zmk/event_manager.h>
 #include <zmk/events/position_state_changed.h>
 #include <zmk/events/layer_state_changed.h>
-#include <zmk/layers.h>
+#include <zmk/keymap.h>
 #include <raw_hid/events.h>
 
 #include <zephyr/logging/log.h>
@@ -37,7 +37,7 @@ static void send_layer_state(void) {
     report[1] = 4; // Size of layer state in bytes (uint32_t)
 
     // Get complete layer state from ZMK
-    uint32_t default_layer_state = zmk_keymap_highest_layer_active();
+    uint32_t default_layer_state = (uint32_t)zmk_keymap_layer_default();
     uint32_t layer_state = zmk_keymap_layer_state();
 
     // Pack layer states as little-endian bytes (like KeyPeek)
