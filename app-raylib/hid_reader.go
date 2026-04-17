@@ -77,11 +77,11 @@ func (hr *HIDReader) FindKeyboardDevice() error {
 		return fmt.Errorf("no ZMK Raw HID device found")
 	}
 
-	// Try to open device
-	device, err := hid.Open(foundDevice.VendorID, foundDevice.ProductID, "")
+	// Try to open device using path (more reliable)
+	device, err := hid.OpenPath(foundDevice.Path)
 	if err != nil {
-		return fmt.Errorf("failed to open device %04X:%04X: %w",
-			foundDevice.VendorID, foundDevice.ProductID, err)
+		return fmt.Errorf("failed to open device %04X:%04X at %s: %w",
+			foundDevice.VendorID, foundDevice.ProductID, foundDevice.Path, err)
 	}
 
 	hr.device = device
