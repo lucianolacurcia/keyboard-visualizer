@@ -33,12 +33,90 @@ layers:
   - .
   - /
   - ENTER
-  - DEL
+  - {t: DEL, h: NUMS}
   - {t: TAB, h: WM}
-  - SPACE
-  - RET
+  - {t: SPACE, h: SYMS}
+  - {t: RET, h: SYMS}
   - {t: ESC, h: WM}
-  - BSPC
+  - {t: BSPC, h: NUMS}
+  NUMS:
+  - '1'
+  - '2'
+  - '3'
+  - '4'
+  - '5'
+  - '6'
+  - '7'
+  - '8'
+  - '9'
+  - '0'
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {type: held}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  SYMS:
+  - '!'
+  - '@'
+  - '#'
+  - $
+  - '%'
+  - ^
+  - '&'
+  - '*'
+  - (
+  - )
+  - '-'
+  - '='
+  - '['
+  - ']'
+  - ''''
+  - ','
+  - .
+  - ':'
+  - \
+  - '"'
+  - {t: ▽, type: trans}
+  - _
+  - +
+  - '{'
+  - '}'
+  - <
+  - '>'
+  - '|'
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - '?'
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {type: held}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
   WM:
   - Gui+1
   - Gui+2
@@ -52,7 +130,7 @@ layers:
   - Gui+0
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
+  - Gui+D
   - Gui+F
   - Gui+T
   - Gui+H
@@ -61,17 +139,17 @@ layers:
   - Gui+L
   - {t: ▽, type: trans}
   - WMS
+  - VOL DN
+  - MUTE
+  - VOL UP
+  - PREV
+  - PP
+  - NEXT
+  - BRI DN
+  - BRI UP
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
-  - {t: ▽, type: trans}
+  - WMS
   - {t: ▽, type: trans}
   - {type: held}
   - {t: ▽, type: trans}
@@ -117,6 +195,45 @@ layers:
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
   - {t: ▽, type: trans}
+  CONFIG:
+  - RST
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - BOOT
+  - BOOT
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - RST
+  - {t: BT, h: '0'}
+  - {t: BT, h: '1'}
+  - {t: BT, h: '2'}
+  - {t: BT, h: '3'}
+  - BT CLR
+  - BT CLR
+  - {t: BT, h: '3'}
+  - {t: BT, h: '2'}
+  - {t: BT, h: '1'}
+  - {t: BT, h: '0'}
+  - {t: ▽, type: trans}
+  - OUT TOG
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - {t: ▽, type: trans}
+  - OUT TOG
+  - {t: ▽, type: trans}
+  - {t: BASE, h: toggle}
+  - {t: BASE, h: toggle}
+  - {t: BASE, h: toggle}
+  - {t: BASE, h: toggle}
+  - {t: BASE, h: toggle}
+  - {t: BASE, h: toggle}
 combos:
 - p: [0, 1]
   k: ESC
@@ -126,3 +243,8 @@ combos:
   l: [WM]
 - p: [8, 9]
   k: BACKSPACE
+- p: [30, 32]
+  k: {t: CONFIG, h: toggle}
+- p: [0, 1]
+  k: {t: BASE, h: toggle}
+  l: [CONFIG]

@@ -43,6 +43,9 @@ func main() {
 	rl.InitWindow(windowWidth, windowHeight, "Raylib Keyboard Test")
 	defer rl.CloseWindow()
 
+	// Enable mouse passthrough for true clickthrough overlay
+	rl.SetWindowState(rl.FlagWindowMousePassthrough)
+
 	rl.SetTargetFPS(60)
 
 	// HID event processing
@@ -149,6 +152,9 @@ func main() {
 			}
 		}
 
+		// Draw combo connections
+		drawComboConnections(visualizer)
+
 		// Draw status info
 		statusText := fmt.Sprintf("Layer: %s | HID: %s",
 			visualizer.CurrentLayer,
@@ -174,7 +180,7 @@ func processHIDEvent(event *HIDEvent, visualizer *KeyboardVisualizer) {
 			layerName := GetActiveLayerName(event.LayerState.LayerState)
 			if layerName != visualizer.CurrentLayer {
 				visualizer.SwitchLayer(layerName)
-				fmt.Printf("HID: Layer switched to %s (state: 0x%x)\n",
+				log.Printf("LAYER:    %s (state: 0x%x)",
 					layerName, event.LayerState.LayerState)
 			}
 		}
@@ -186,12 +192,78 @@ func processHIDEvent(event *HIDEvent, visualizer *KeyboardVisualizer) {
 			if position >= 0 && position < len(visualizer.Keys) {
 				if event.KeyEvent.Pressed {
 					visualizer.PressKey(position)
-					fmt.Printf("HID: Key pressed at [%d,%d] -> position %d\n",
+					log.Printf("KEY:      pressed [%d,%d] -> pos %d",
 						event.KeyEvent.Row, event.KeyEvent.Col, position)
 				} else {
 					visualizer.ReleaseKey(position)
-					fmt.Printf("HID: Key released at [%d,%d] -> position %d\n",
+					log.Printf("KEY:      released [%d,%d] -> pos %d",
 						event.KeyEvent.Row, event.KeyEvent.Col, position)
+				}
+			}
+		}
+	}
+}
+
+// drawComboConnections renders visual indicators for available combos
+func drawComboConnections(visualizer *KeyboardVisualizer) {
+	// Only show combos for current layer
+	currentLayer := visualizer.CurrentLayer
+
+	for _, combo := range visualizer.Keymap.Combos {
+		// Check if combo is active in current layer
+		isActiveInLayer := len(combo.L) == 0 // No layer restriction = active in all layers
+		for _, layer := range combo.L {
+			if layer == currentLayer {
+				isActiveInLayer = true
+				break
+			}
+		}
+
+		if !isActiveInLayer {
+			continue
+		}
+
+		// Draw connections between combo keys
+		if len(combo.P) >= 2 {
+			// Get positions of combo keys
+			var keyPositions []rl.Vector2
+
+			for _, pos := range combo.P {
+				if pos < len(visualizer.Keys) {
+					key := &visualizer.Keys[pos]
+					centerX := key.PixelX + key.PixelWidth/2
+					centerY := key.PixelY + key.PixelHeight/2
+					keyPositions = append(keyPositions, rl.NewVector2(centerX, centerY))
+				}
+			}
+
+			// Draw lines connecting combo keys
+			for i := 0; i < len(keyPositions)-1; i++ {
+				rl.DrawLineV(keyPositions[i], keyPositions[i+1], rl.Orange)
+
+				// Draw small circles at connection points
+				rl.DrawCircleV(keyPositions[i], 3, rl.Orange)
+			}
+			if len(keyPositions) > 1 {
+				rl.DrawCircleV(keyPositions[len(keyPositions)-1], 3, rl.Orange)
+			}
+
+			// Draw combo result text near the connection
+			if len(keyPositions) >= 2 {
+				// Position text near the center of the combo
+				textX := (keyPositions[0].X + keyPositions[len(keyPositions)-1].X) / 2
+				textY := (keyPositions[0].Y + keyPositions[len(keyPositions)-1].Y) / 2 - 20
+
+				comboText := combo.K.GetDisplayText()
+				if comboText != "" {
+					// Draw background for text
+					textWidth := rl.MeasureText(comboText, 12)
+					rl.DrawRectangle(int32(textX-float32(textWidth)/2-2), int32(textY-2),
+						int32(textWidth+4), 16, rl.NewColor(0, 0, 0, 128))
+
+					// Draw text
+					rl.DrawText(comboText, int32(textX-float32(textWidth)/2), int32(textY),
+						12, rl.Orange)
 				}
 			}
 		}

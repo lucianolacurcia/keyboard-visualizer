@@ -36,6 +36,8 @@ type KeyState struct {
 	IsVisible     bool   // Whether key should be shown in current layer
 	IsTransparent bool   // Whether key is transparent in current layer
 	IsHeld        bool   // Whether key is in "held" state
+	ComboActive   bool   // Key is part of an active combo
+	ComboResult   string // What the combo will output when triggered
 }
 
 // Complete drawing information for a key

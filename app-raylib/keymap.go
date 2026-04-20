@@ -32,7 +32,7 @@ type KeyEntry struct {
 // Combo represents key combinations
 type Combo struct {
 	P []int    `yaml:"p"` // positions (key indices)
-	K string   `yaml:"k"` // key output
+	K KeyEntry `yaml:"k"` // key output (can be simple string or complex object)
 	L []string `yaml:"l"` // active layers
 }
 
