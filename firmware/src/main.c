@@ -9,25 +9,16 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 #define REPORT_SIZE 32
 
-// KeyPeek-compatible protocol
+// KeyPeek-compatible protocol - works with any ZMK keyboard
 #define REPORT_TYPE_LAYER_STATE 0xff  // Complete layer state (stateless)
 #define REPORT_TYPE_KEY_EVENT   0xF1  // Individual key events (eventful)
 
-// Convert ZMK position to row/col (assuming Totem 38-key layout)
-static void position_to_row_col(uint8_t position, uint8_t *row, uint8_t *col) {
-    // Totem uses a 4x10 matrix (4 rows, 10 cols per half)
-    // Left half: positions 0-18, Right half: positions 19-37
-    if (position < 19) {
-        // Left half
-        *row = position / 5;  // 5 columns per row on left
-        *col = position % 5;
-    } else {
-        // Right half
-        uint8_t right_pos = position - 19;
-        *row = right_pos / 5;  // 5 columns per row on right
-        *col = right_pos % 5 + 5;  // Offset by 5 for right half
-    }
-}
+// Protocol formats:
+// KEY_EVENT:   [0xF1, position, pressed, reserved]
+// LAYER_STATE: [0xff, size(4), default_layer[4], current_layer[4]]
+
+// Note: Position mapping is now handled by the host application
+// This allows the firmware to work generically with any ZMK keyboard
 
 // Send complete layer state (stateless - prevents drift)
 static void send_layer_state(void) {
@@ -56,16 +47,14 @@ static void send_layer_state(void) {
 }
 
 // Send individual key events (eventful - for real-time highlighting)
+// Protocol: [type, position, pressed, reserved]
 static void send_key_event(uint8_t position, bool pressed) {
     uint8_t report[REPORT_SIZE] = {0};
-    uint8_t row, col;
 
-    position_to_row_col(position, &row, &col);
-
-    report[0] = REPORT_TYPE_KEY_EVENT;
-    report[1] = row;
-    report[2] = col;
-    report[3] = pressed ? 1 : 0;
+    report[0] = REPORT_TYPE_KEY_EVENT;  // 0xF1
+    report[1] = position;               // ZMK position (0-N, depends on keyboard)
+    report[2] = pressed ? 1 : 0;        // Key state (1=pressed, 0=released)
+    report[3] = 0;                      // Reserved for future use
 
     raise_raw_hid_sent_event(
         (struct raw_hid_sent_event){.data = report, .length = REPORT_SIZE});
