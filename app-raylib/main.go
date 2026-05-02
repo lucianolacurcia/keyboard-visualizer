@@ -3,15 +3,26 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 func main() {
+	// Parse command line arguments - FAIL-FAST approach
+	if len(os.Args) < 3 {
+		log.Fatal("Usage: keyboard-visualizer <layout.json> <keymap.yaml>\n" +
+			"  layout.json: Physical keyboard layout (from keymap-drawer)\n" +
+			"  keymap.yaml: User keymap configuration (from keymap-drawer)")
+	}
+
+	layoutFile := os.Args[1] // Physical layout (from keymap-drawer)
+	keymapFile := os.Args[2] // User keymap (from keymap-drawer)
+
 	// Load keyboard data
-	visualizer, err := NewKeyboardVisualizer("totem.yaml", "totem.json")
+	visualizer, err := NewKeyboardVisualizer(keymapFile, layoutFile)
 	if err != nil {
-		log.Fatalf("Error creating visualizer: %v", err)
+		log.Fatalf("FATAL: Error creating visualizer: %v", err)
 	}
 
 	fmt.Printf("✅ Loaded keyboard: %d keys, %d layers\n", len(visualizer.Keys), len(visualizer.Keymap.Layers))
@@ -34,8 +45,8 @@ func main() {
 	// Configure window for transparency (from our previous tests)
 	rl.SetConfigFlags(
 		rl.FlagWindowUndecorated |
-		rl.FlagWindowTopmost |
-		rl.FlagWindowTransparent,
+			rl.FlagWindowTopmost |
+			rl.FlagWindowTransparent,
 	)
 
 	// Initialize Raylib window with auto-calculated size
@@ -188,17 +199,21 @@ func processHIDEvent(event *HIDEvent, visualizer *KeyboardVisualizer) {
 	case REPORT_TYPE_KEY_EVENT:
 		if event.KeyEvent != nil {
 			// Handle individual key press/release (eventful)
-			position := RowColToPosition(event.KeyEvent.Row, event.KeyEvent.Col)
-			if position >= 0 && position < len(visualizer.Keys) {
-				if event.KeyEvent.Pressed {
-					visualizer.PressKey(position)
-					log.Printf("KEY:      pressed [%d,%d] -> pos %d",
-						event.KeyEvent.Row, event.KeyEvent.Col, position)
-				} else {
-					visualizer.ReleaseKey(position)
-					log.Printf("KEY:      released [%d,%d] -> pos %d",
-						event.KeyEvent.Row, event.KeyEvent.Col, position)
-				}
+			position := int(event.KeyEvent.Position) // Direct position from generic firmware
+
+			// STRICT validation - fail-fast on invalid position
+			if position < 0 || position >= len(visualizer.Keys) {
+				log.Printf("FATAL: Firmware sent invalid position %d (max: %d)",
+					position, len(visualizer.Keys)-1)
+				break // Skip this invalid event
+			}
+
+			if event.KeyEvent.Pressed {
+				visualizer.PressKey(position)
+				log.Printf("KEY:      pressed pos %d", position)
+			} else {
+				visualizer.ReleaseKey(position)
+				log.Printf("KEY:      released pos %d", position)
 			}
 		}
 	}
@@ -252,7 +267,7 @@ func drawComboConnections(visualizer *KeyboardVisualizer) {
 			if len(keyPositions) >= 2 {
 				// Position text near the center of the combo
 				textX := (keyPositions[0].X + keyPositions[len(keyPositions)-1].X) / 2
-				textY := (keyPositions[0].Y + keyPositions[len(keyPositions)-1].Y) / 2 - 20
+				textY := (keyPositions[0].Y+keyPositions[len(keyPositions)-1].Y)/2 - 20
 
 				comboText := combo.K.GetDisplayText()
 				if comboText != "" {

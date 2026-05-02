@@ -45,11 +45,10 @@ var hidModifiers = map[uint8]string{
 	0x10: "RCTRL", 0x20: "RSHIFT", 0x40: "RALT", 0x80: "RGUI",
 }
 
-// HID Events
+// HID Events - Updated for generic firmware protocol
 type HIDKeyEvent struct {
-	Row     uint8
-	Col     uint8
-	Pressed bool
+	Position uint8 // ZMK position (0-N, raw from firmware)
+	Pressed  bool
 }
 
 type HIDLayerState struct {
@@ -58,8 +57,8 @@ type HIDLayerState struct {
 }
 
 type HIDEvent struct {
-	Type      uint8
-	KeyEvent  *HIDKeyEvent
+	Type       uint8
+	KeyEvent   *HIDKeyEvent
 	LayerState *HIDLayerState
 }
 
@@ -96,7 +95,7 @@ func (hr *HIDReader) FindKeyboardDevice() error {
 				info.VendorID, info.ProductID, info.UsagePage)
 			customDevice = info
 		} else if info.VendorID == 0x1D50 && info.ProductID == 0x615E &&
-		          info.UsagePage == 0x0001 && info.Usage == 0x0006 {
+			info.UsagePage == 0x0001 && info.Usage == 0x0006 {
 			log.Printf("Found ZMK Keyboard device: %04X:%04X (Usage: %04X/%04X) Path: %s",
 				info.VendorID, info.ProductID, info.UsagePage, info.Usage, info.Path)
 			keyboardDevice = info // Take ONLY the real keyboard endpoint
@@ -292,21 +291,21 @@ func (hr *HIDReader) parseLayerState(data []byte) *HIDEvent {
 }
 
 // parseKeyEvent parses individual key event (eventful)
+// Protocol: [type, position, pressed, reserved]
 func (hr *HIDReader) parseKeyEvent(data []byte) *HIDEvent {
 	if len(data) < 4 {
 		return nil
 	}
 
-	row := data[1]
-	col := data[2]
-	pressed := data[3] != 0
+	position := data[1]     // ZMK position (0-N)
+	pressed := data[2] != 0 // Key state (1=pressed, 0=released)
+	// data[3] is reserved for future use
 
 	return &HIDEvent{
 		Type: REPORT_TYPE_KEY_EVENT,
 		KeyEvent: &HIDKeyEvent{
-			Row:     row,
-			Col:     col,
-			Pressed: pressed,
+			Position: position,
+			Pressed:  pressed,
 		},
 	}
 }
@@ -371,14 +370,5 @@ func parseKeyboardReport(data []byte) string {
 	return fmt.Sprintf("%s %s", debug, result)
 }
 
-// RowColToPosition converts row/col to keyboard position index
-func RowColToPosition(row, col uint8) int {
-	// Inverse of position_to_row_col from ZMK module
-	if col < 5 {
-		// Left half
-		return int(row*5 + col)
-	} else {
-		// Right half
-		return int(row*5 + (col-5) + 19)
-	}
-}
+// Note: RowColToPosition removed - firmware now sends direct position
+// No conversion needed since firmware is generic and sends raw ZMK position

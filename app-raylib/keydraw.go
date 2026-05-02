@@ -46,11 +46,11 @@ type KeyDrawInfo struct {
 	LogicalIndex int         // Index in keymap (0-37 for Totem)
 
 	// Visual coordinates (converted to pixels)
-	PixelX      float32
-	PixelY      float32
-	PixelWidth  float32
-	PixelHeight float32
-	RotationDeg float32
+	PixelX          float32
+	PixelY          float32
+	PixelWidth      float32
+	PixelHeight     float32
+	RotationDeg     float32
 	RotationCenterX float32
 	RotationCenterY float32
 
@@ -67,21 +67,21 @@ type KeyDrawInfo struct {
 
 // Rendering configuration
 type RenderConfig struct {
-	KeyUnitSize     float32 // Pixels per key unit (1u = 60px typically)
-	KeyPadding      float32 // Inner padding of key
-	FontSize        int32   // Font size for key labels
-	BorderWidth     float32 // Border thickness
-	WindowWidth     int32   // Window width
-	WindowHeight    int32   // Window height
-	OffsetX         float32 // Global X offset
-	OffsetY         float32 // Global Y offset
+	KeyUnitSize  float32 // Pixels per key unit (1u = 60px typically)
+	KeyPadding   float32 // Inner padding of key
+	FontSize     int32   // Font size for key labels
+	BorderWidth  float32 // Border thickness
+	WindowWidth  int32   // Window width
+	WindowHeight int32   // Window height
+	OffsetX      float32 // Global X offset
+	OffsetY      float32 // Global Y offset
 
 	// Colors
-	IdleColor       rl.Color // Key color when idle
-	PressedColor    rl.Color // Key color when pressed
+	IdleColor        rl.Color // Key color when idle
+	PressedColor     rl.Color // Key color when pressed
 	TransparentColor rl.Color // Key color when transparent
-	TextColor       rl.Color // Text color
-	BorderColor     rl.Color // Border color
+	TextColor        rl.Color // Text color
+	BorderColor      rl.Color // Border color
 }
 
 // Complete keyboard visualizer state
@@ -136,9 +136,9 @@ func NewKeyboardVisualizer(keymapFile, layoutFile string) (*KeyboardVisualizer, 
 		WindowHeight:     windowHeight,
 		OffsetX:          30.0, // Reduced for better fit
 		OffsetY:          30.0,
-		IdleColor:        rl.NewColor(64, 64, 64, 255),     // Dark gray
-		PressedColor:     rl.NewColor(79, 195, 247, 255),   // Cyan
-		TransparentColor: rl.NewColor(64, 64, 64, 128),     // Semi-transparent gray
+		IdleColor:        rl.NewColor(64, 64, 64, 255),   // Dark gray
+		PressedColor:     rl.NewColor(79, 195, 247, 255), // Cyan
+		TransparentColor: rl.NewColor(64, 64, 64, 128),   // Semi-transparent gray
 		TextColor:        rl.White,
 		BorderColor:      rl.NewColor(128, 128, 128, 255),
 	}
@@ -149,6 +149,11 @@ func NewKeyboardVisualizer(keymapFile, layoutFile string) (*KeyboardVisualizer, 
 		Config:         config,
 		CurrentLayer:   "BASE",
 		LayerStack:     []string{"BASE"},
+	}
+
+	// STRICT validation - fail-fast on any configuration mismatch
+	if err := visualizer.validateConfiguration(); err != nil {
+		return nil, err
 	}
 
 	// Initialize key draw info
@@ -183,8 +188,8 @@ func (kv *KeyboardVisualizer) initializeKeys() error {
 		}
 
 		// Convert units to pixels
-		pixelX := pos.X * kv.Config.KeyUnitSize + kv.Config.OffsetX
-		pixelY := pos.Y * kv.Config.KeyUnitSize + kv.Config.OffsetY
+		pixelX := pos.X*kv.Config.KeyUnitSize + kv.Config.OffsetX
+		pixelY := pos.Y*kv.Config.KeyUnitSize + kv.Config.OffsetY
 		pixelWidth := pos.W * kv.Config.KeyUnitSize
 		pixelHeight := pos.W * kv.Config.KeyUnitSize // Use width for square keys
 		if pos.H > 0 {
@@ -192,8 +197,8 @@ func (kv *KeyboardVisualizer) initializeKeys() error {
 		}
 
 		// Convert rotation center
-		rotationCenterX := pos.RX * kv.Config.KeyUnitSize + kv.Config.OffsetX
-		rotationCenterY := pos.RY * kv.Config.KeyUnitSize + kv.Config.OffsetY
+		rotationCenterX := pos.RX*kv.Config.KeyUnitSize + kv.Config.OffsetX
+		rotationCenterY := pos.RY*kv.Config.KeyUnitSize + kv.Config.OffsetY
 
 		kv.Keys[i] = KeyDrawInfo{
 			Position:        pos,
@@ -340,4 +345,99 @@ func calculateWindowSize(physicalLayout *PhysicalLayout) (int32, int32) {
 // GetWindowSize returns the configured window size
 func (kv *KeyboardVisualizer) GetWindowSize() (int32, int32) {
 	return kv.Config.WindowWidth, kv.Config.WindowHeight
+}
+
+// validateConfiguration implements strict validation with fail-fast error handling
+// NO FALLBACKS - fail immediately with clear error messages
+func (kv *KeyboardVisualizer) validateConfiguration() error {
+	// STRICT: Layout must have exactly one LAYOUT section
+	layouts := kv.PhysicalLayout.Layouts
+	if len(layouts) != 1 {
+		return fmt.Errorf("FATAL: Expected exactly 1 layout section, found %d", len(layouts))
+	}
+
+	layout, exists := layouts["LAYOUT"]
+	if !exists {
+		return fmt.Errorf("FATAL: Required 'LAYOUT' section missing in physical layout JSON")
+	}
+
+	layoutKeyCount := len(layout.Layout)
+	if layoutKeyCount == 0 {
+		return fmt.Errorf("FATAL: Physical layout has 0 keys")
+	}
+
+	// STRICT: Every layer must have exact key count match
+	if len(kv.Keymap.Layers) == 0 {
+		return fmt.Errorf("FATAL: Keymap has no layers defined")
+	}
+
+	for layerName, layer := range kv.Keymap.Layers {
+		if len(layer) != layoutKeyCount {
+			return fmt.Errorf("FATAL: Layer '%s' has %d keys, physical layout requires exactly %d",
+				layerName, len(layer), layoutKeyCount)
+		}
+	}
+
+	// STRICT: Combo positions must reference valid keys (no bounds checking fallback)
+	for i, combo := range kv.Keymap.Combos {
+		if len(combo.P) == 0 {
+			return fmt.Errorf("FATAL: Combo %d has no key positions defined", i)
+		}
+		for _, pos := range combo.P {
+			if pos < 0 || pos >= layoutKeyCount {
+				return fmt.Errorf("FATAL: Combo %d references invalid position %d (valid range: 0-%d)",
+					i, pos, layoutKeyCount-1)
+			}
+		}
+	}
+
+	// STRICT: Current layer must exist
+	if _, exists := kv.Keymap.Layers[kv.CurrentLayer]; !exists {
+		return fmt.Errorf("FATAL: Current layer '%s' does not exist in keymap", kv.CurrentLayer)
+	}
+
+	// STRICT: Validate all KeyEntry objects for consistency
+	for layerName, layer := range kv.Keymap.Layers {
+		for pos, keyEntry := range layer {
+			if err := validateKeyEntry(&keyEntry, layerName, pos); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// validateKeyEntry performs strict validation on individual KeyEntry objects
+func validateKeyEntry(keyEntry *KeyEntry, layerName string, position int) error {
+	// Count non-empty fields to detect potential issues
+	fieldCount := 0
+
+	if keyEntry.Simple != "" {
+		fieldCount++
+	}
+	if keyEntry.Center != "" {
+		fieldCount++
+	}
+
+	// STRICT: A key should have at least one defined value
+	allPositions := keyEntry.GetAllPositions()
+	if len(allPositions) == 0 {
+		return fmt.Errorf("FATAL: Layer '%s' position %d has no defined key value",
+			layerName, position)
+	}
+
+	// STRICT: Simple and complex cannot coexist
+	if keyEntry.Simple != "" && len(allPositions) > 1 {
+		return fmt.Errorf("FATAL: Layer '%s' position %d has both simple value '%s' and complex fields",
+			layerName, position, keyEntry.Simple)
+	}
+
+	// STRICT: Invalid type validation
+	if keyEntry.Type != "" && keyEntry.Type != "trans" && keyEntry.Type != "held" && keyEntry.Type != "ghost" {
+		return fmt.Errorf("FATAL: Layer '%s' position %d has invalid type '%s' (valid: trans, held, ghost)",
+			layerName, position, keyEntry.Type)
+	}
+
+	return nil
 }
